@@ -3,8 +3,8 @@
 // === IMPORT SUPABASE CLIENT VIA CDN ===
 // Pastikan Anda menambahkan <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script> di HTML sebelum script.js 
 // Atau kode ini berasumsi library Supabase sudah ter-load secara global.
-const SUPABASE_URL = "URL_SUPABASE_ANDA_DI_SINI";
-const SUPABASE_KEY = "ANON_KEY_SUPABASE_ANDA_DI_SINI";
+const SUPABASE_URL = "https://zyogoissymtonfkyjqxf.supabase.co";
+const SUPABASE_KEY = "sb_publishable_3uDWsaihi6doAxFdmC_VKA_GG-_aD36";
 const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 /* ── STATE ── */
