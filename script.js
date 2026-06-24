@@ -1,29 +1,26 @@
 'use strict';
 
 // === IMPORT SUPABASE CLIENT VIA CDN ===
-// Pastikan Anda menambahkan <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script> di HTML sebelum script.js 
-// Atau kode ini berasumsi library Supabase sudah ter-load secara global.
 const SUPABASE_URL = "https://zyogoissymtonfkyjqxf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3uDWsaihi6doAxFdmC_VKA_GG-_aD36";
-const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-// window.supabase adalah objek bawaan dari CDN, kita tampung ke variabel baru yang aman
+// Variabel diubah menjadi supabaseClient agar tidak bentrok dengan objek global CDN
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 /* ── STATE ── */
 let state = {
   profile: null,
   logs: [],
-  sensorTemp: null,   
-  heaterTemp: 37,     
+  sensorTemp: null,   // Nilai dibaca live dari database Supabase
+  heaterTemp: 37,     // Default awal aktif
   vibration: null,    
 };
 
-const DEVICE_ID = 1; 
+const DEVICE_ID = 1; // ID Baris status alat pada tabel device_status
 
 /* ── INITIALIZE SUPABASE REALTIME ── */
 async function initSupabaseRealtime() {
-  if (!supabaseClient) { // Sesuaikan ke nama variabel baru
+  if (!supabaseClient) {
     console.error("Supabase SDK gagal dimuat!");
     return;
   }
@@ -42,7 +39,7 @@ async function initSupabaseRealtime() {
     refreshDash();
   }
 
-  // 2. Berlangganan (Subscribe) Perubahan Realtime
+  // 2. Berlangganan (Subscribe) Perubahan Realtime dari ESP32
   supabaseClient
     .channel('schema-db-changes')
     .on(
@@ -52,6 +49,7 @@ async function initSupabaseRealtime() {
         const newData = payload.new;
         state.sensorTemp = newData.sensor_temp;
         
+        // Auto-refresh jika user sedang di halaman dashboard
         if (document.getElementById('page-dashboard').classList.contains('active')) {
           refreshDash();
         }
@@ -62,7 +60,7 @@ async function initSupabaseRealtime() {
 
 /* ── LOG KE DATABASE CLOUD ── */
 async function pushLogToSupabase(aksi) {
-  if (!state.profile || !supabaseClient) return; // Sesuaikan ke nama variabel baru
+  if (!state.profile || !supabaseClient) return;
 
   const logData = {
     nama: state.profile.nama,
@@ -75,9 +73,11 @@ async function pushLogToSupabase(aksi) {
     aksi: aksi
   };
 
-  const { error } = await supabaseClient.from('therapy_logs').insert([logData]); // Sesuaikan ke nama variabel baru
+  // Simpan ke tabel cloud Supabase
+  const { error } = await supabaseClient.from('therapy_logs').insert([logData]);
   if (error) console.error("Gagal menyimpan log ke cloud:", error);
 
+  // Tetap masukkan ke state lokal untuk performa UI instan
   state.logs.push({
     waktu: nowStr(),
     ...logData,
@@ -85,11 +85,11 @@ async function pushLogToSupabase(aksi) {
   });
 }
 
-/* ── UPDATE REMOTE CONTROL ── */
+/* ── UPDATE REMOTE CONTROL (Kirim Data ke ESP32 via DB) ── */
 async function updateDeviceControl() {
-  if (!supabaseClient) return; // Sesuaikan ke nama variabel baru
+  if (!supabaseClient) return;
 
-  const { error } = await supabaseClient // Sesuaikan ke nama variabel baru
+  const { error } = await supabaseClient
     .from('device_status')
     .update({ 
       heater_pwm: state.heaterTemp ? state.heaterTemp : 0, 
@@ -194,7 +194,6 @@ document.getElementById('btn-start').addEventListener('click', () => {
   navBtns[1].classList.add('active');
   switchPage('dashboard');
   
-  // Kirim data set awal kontrol ke DB sesaat setelah sesi jalan
   updateDeviceControl();
 });
 
@@ -308,7 +307,6 @@ document.querySelectorAll('.heater-sw').forEach(sw => {
     }
     document.getElementById('mini-heat').textContent = state.heaterTemp ? `${state.heaterTemp}°C` : 'OFF';
     
-    // Tembak perubahan status ke database cloud
     updateDeviceControl();
   });
 });
@@ -331,7 +329,6 @@ document.querySelectorAll('.vib-sw').forEach(sw => {
     }
     document.getElementById('mini-vib').textContent = state.vibration ? `Vol ${state.vibration}` : 'OFF';
     
-    // Tembak perubahan status ke database cloud
     updateDeviceControl();
   });
 });
