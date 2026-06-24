@@ -12,7 +12,7 @@ let state = {
   profile: null,
   logs: [],
   sensorTemp: null,   // Nilai dibaca live dari database Supabase
-  heaterTemp: 37,     // Default awal aktif
+  heaterTemp: null,     // Default awal aktif
   vibration: null,    
 };
 
@@ -472,7 +472,7 @@ function hardReset() {
   state.profile    = null;
   state.logs       = [];
   state.sensorTemp = null;
-  state.heaterTemp = 37;
+  state.heaterTemp = null;
   state.vibration  = null;
 
   document.getElementById('inp-nama').value    = '';
