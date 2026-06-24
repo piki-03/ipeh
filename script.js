@@ -1,15 +1,105 @@
-
-
 'use strict';
+
+// === IMPORT SUPABASE CLIENT VIA CDN ===
+// Pastikan Anda menambahkan <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script> di HTML sebelum script.js 
+// Atau kode ini berasumsi library Supabase sudah ter-load secara global.
+const SUPABASE_URL = "URL_SUPABASE_ANDA_DI_SINI";
+const SUPABASE_KEY = "ANON_KEY_SUPABASE_ANDA_DI_SINI";
+const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 /* ── STATE ── */
 let state = {
   profile: null,
   logs: [],
-  sensorTemp: null,   // independent gauge value (manual input)
-  heaterTemp: 37,     // active heater (37|40|44|null)
-  vibration: null,    // active vibration (1|2|3|null)
+  sensorTemp: null,   // Nilai dibaca live dari database Supabase
+  heaterTemp: 37,     // Default awal aktif
+  vibration: null,    
 };
+
+const DEVICE_ID = 1; // ID Baris status alat pada tabel device_status
+
+/* ── INITIALIZE SUPABASE REALTIME ── */
+async function initSupabaseRealtime() {
+  if (!supabase) {
+    console.error("Supabase SDK gagal dimuat!");
+    return;
+  }
+
+  // 1. Ambil data awal dari database saat aplikasi dibuka
+  const { data, error } = await supabase
+    .from('device_status')
+    .select('*')
+    .eq('id', DEVICE_ID)
+    .single();
+
+  if (!error && data) {
+    state.sensorTemp = data.sensor_temp;
+    // Sinkronisasi status awal dari DB ke UI jika diperlukan
+    if (data.heater_pwm) state.heaterTemp = data.heater_pwm;
+    if (data.vibration_pwm) state.vibration = data.vibration_pwm;
+    refreshDash();
+  }
+
+  // 2. Berlangganan (Subscribe) Perubahan Realtime dari ESP32 (Kolom sensor_temp)
+  supabase
+    .channel('schema-db-changes')
+    .on(
+      'postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'device_status', filter: `id=eq.${DEVICE_ID}` },
+      (payload) => {
+        const newData = payload.new;
+        state.sensorTemp = newData.sensor_temp;
+        
+        // Auto-refresh jika user sedang di halaman dashboard
+        if (document.getElementById('page-dashboard').classList.contains('active')) {
+          refreshDash();
+        }
+      }
+    )
+    .subscribe();
+}
+
+/* ── LOG KE DATABASE CLOUD ── */
+async function pushLogToSupabase(aksi) {
+  if (!state.profile || !supabase) return;
+
+  const logData = {
+    nama: state.profile.nama,
+    umur: state.profile.umur,
+    tanggal_input: state.profile.tanggal,
+    gender: state.profile.gender,
+    suhu_sensor: state.sensorTemp !== null ? state.sensorTemp + '°C' : '-',
+    pemanas: state.heaterTemp ? state.heaterTemp + '°C' : '-',
+    getaran: state.vibration ? `Volume ${state.vibration}` : '-',
+    aksi: aksi
+  };
+
+  // Simpan ke tabel cloud Supabase
+  const { error } = await supabase.from('therapy_logs').insert([logData]);
+  if (error) console.error("Gagal menyimpan log ke cloud:", error);
+
+  // Tetap masukkan ke state lokal untuk performa UI instan di halaman riwayat
+  state.logs.push({
+    waktu: nowStr(),
+    ...logData,
+    suhu: logData.suhu_sensor,
+  });
+}
+
+/* ── UPDATE REMOTE CONTROL (Kirim Data ke ESP32 via DB) ── */
+async function updateDeviceControl() {
+  if (!supabase) return;
+
+  const { error } = await supabase
+    .from('device_status')
+    .update({ 
+      heater_pwm: state.heaterTemp ? state.heaterTemp : 0, 
+      vibration_pwm: state.vibration ? state.vibration : 0 
+    })
+    .eq('id', DEVICE_ID);
+
+  if (error) console.error("Gagal mengirim perintah kontrol ke database:", error);
+}
 
 /* ── CLOCK ── */
 function updateClock() {
@@ -39,7 +129,6 @@ const pages   = document.querySelectorAll('.page');
 navBtns.forEach(btn => {
   btn.addEventListener('click', () => {
     const target = btn.dataset.page;
-    // Block access to other pages until profile is set
     if (!state.profile && target !== 'input') {
       showToast('⚠ Isi data profil terlebih dahulu');
       return;
@@ -53,7 +142,6 @@ navBtns.forEach(btn => {
 function switchPage(id) {
   pages.forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + id).classList.add('active');
-  // Scroll back to top when switching
   document.querySelector('.phone-body').scrollTop = 0;
 
   if (id === 'dashboard') refreshDash();
@@ -62,9 +150,8 @@ function switchPage(id) {
 }
 
 /* ── INPUT PAGE ── */
-// Set today as default date
 const inpTanggal = document.getElementById('inp-tanggal');
-inpTanggal.value = todayStr();
+if (inpTanggal) inpTanggal.value = todayStr();
 
 function todayStr() {
   const d = new Date();
@@ -72,7 +159,6 @@ function todayStr() {
 }
 function pad(n) { return String(n).padStart(2,'0'); }
 
-// Gender toggle
 let selectedGender = 'Pria';
 const genderGroup = document.getElementById('gender-group');
 genderGroup.querySelectorAll('.gender-btn').forEach(btn => {
@@ -83,17 +169,15 @@ genderGroup.querySelectorAll('.gender-btn').forEach(btn => {
   });
 });
 
-// START button
 document.getElementById('btn-start').addEventListener('click', () => {
   const nama    = document.getElementById('inp-nama').value.trim();
   const umur    = document.getElementById('inp-umur').value.trim();
   const tanggal = document.getElementById('inp-tanggal').value;
 
-  if (!nama)                        { showToast('⚠ Nama tidak boleh kosong'); return; }
+  if (!nama)                         { showToast('⚠ Nama tidak boleh kosong'); return; }
   if (!umur || isNaN(+umur) || +umur < 1) { showToast('⚠ Umur tidak valid'); return; }
-  if (!tanggal)                     { showToast('⚠ Tanggal harus diisi'); return; }
+  if (!tanggal)                      { showToast('⚠ Tanggal harus diisi'); return; }
 
-  // Different profile → confirm reset
   if (state.profile && state.profile.nama !== nama) {
     if (!confirm(`Profil aktif: "${state.profile.nama}". Ganti profil akan hapus semua log. Lanjutkan?`)) return;
     hardReset();
@@ -101,17 +185,18 @@ document.getElementById('btn-start').addEventListener('click', () => {
 
   state.profile = { nama, umur: +umur, tanggal, gender: selectedGender };
 
-  // Update greeting
   document.getElementById('hero-greeting').textContent = `Halo, ${nama} 👋`;
   document.getElementById('hero-avatar').textContent   = nama.charAt(0).toUpperCase();
 
-  addLog('Sesi dimulai');
+  pushLogToSupabase('Sesi dimulai');
   showToast(`✓ Sesi dimulai — ${nama}`);
 
-  // Navigate to dashboard
   navBtns.forEach(b => b.classList.remove('active'));
   navBtns[1].classList.add('active');
   switchPage('dashboard');
+  
+  // Kirim data set awal kontrol ke DB sesaat setelah sesi jalan
+  updateDeviceControl();
 });
 
 /* ── DASHBOARD ── */
@@ -119,7 +204,6 @@ function refreshDash() {
   const name = state.profile ? state.profile.nama : 'Tamu';
   document.getElementById('dash-hello').textContent = `Hello ${name} 👋`;
 
-  // Gauge — value comes from database (simulated as state.sensorTemp)
   const temp = state.sensorTemp;
   document.getElementById('gauge-val').textContent = temp !== null ? temp : '--';
   document.getElementById('mini-temp').textContent = temp !== null ? `${temp}°C` : '--';
@@ -130,7 +214,7 @@ function refreshDash() {
   document.getElementById('mini-heat').textContent = state.heaterTemp ? `${state.heaterTemp}°C` : 'OFF';
 }
 
-/* ── GAUGE — independent from heater ── */
+/* ── GAUGE GRAPHIC ── */
 function drawGauge(value) {
   const canvas = document.getElementById('gaugeCanvas');
   if (!canvas) return;
@@ -143,7 +227,6 @@ function drawGauge(value) {
   const startA = Math.PI;
   const endA   = 2 * Math.PI;
 
-  // Track
   ctx.beginPath();
   ctx.arc(cx, cy, r, startA, endA);
   ctx.strokeStyle = '#1e2238';
@@ -156,7 +239,6 @@ function drawGauge(value) {
     const ratio = Math.max(0, Math.min(1, (value - min) / (max - min)));
     const curA  = startA + ratio * Math.PI;
 
-    // Color gradient: cyan (cold) → gold (hot)
     const grd = ctx.createLinearGradient(cx - r, cy, cx + r, cy);
     grd.addColorStop(0,    '#00e5ff');
     grd.addColorStop(0.5,  '#e040fb');
@@ -169,7 +251,6 @@ function drawGauge(value) {
     ctx.lineCap = 'round';
     ctx.stroke();
 
-    // Glow needle dot
     const nx = cx + r * Math.cos(curA);
     const ny = cy + r * Math.sin(curA);
     ctx.beginPath();
@@ -181,7 +262,6 @@ function drawGauge(value) {
     ctx.shadowBlur = 0;
   }
 
-  // Scale ticks: 20, 30, 40, 50
   const min = 20, max = 50;
   [20, 25, 30, 35, 40, 45, 50].forEach(t => {
     const ratio = (t - min) / (max - min);
@@ -199,7 +279,6 @@ function drawGauge(value) {
     ctx.stroke();
   });
 
-  // Labels 20 / 35 / 50
   ctx.fillStyle = '#3a4060';
   ctx.font = '500 11px Inter, sans-serif';
   ctx.textAlign = 'center';
@@ -212,24 +291,26 @@ function drawGauge(value) {
   });
 }
 
-/* ── HEATER SWITCHES (independent from gauge) ── */
+/* ── HEATER SWITCHES ── */
 document.querySelectorAll('.heater-sw').forEach(sw => {
   sw.addEventListener('change', () => {
     const temp = +sw.dataset.temp;
     if (sw.checked) {
-      // Exclusive — only one heater at a time
       document.querySelectorAll('.heater-sw').forEach(s => {
         if (s !== sw) s.checked = false;
       });
       state.heaterTemp = temp;
-      addLog(`Pemanas diaktifkan ${temp}°C`);
+      pushLogToSupabase(`Pemanas diaktifkan ${temp}°C`);
       showToast(`⚡ Pemanas ${temp}°C ON`);
     } else {
       state.heaterTemp = null;
-      addLog('Pemanas dimatikan');
+      pushLogToSupabase('Pemanas dimatikan');
       showToast('Pemanas OFF');
     }
     document.getElementById('mini-heat').textContent = state.heaterTemp ? `${state.heaterTemp}°C` : 'OFF';
+    
+    // Tembak perubahan status ke database cloud
+    updateDeviceControl();
   });
 });
 
@@ -242,37 +323,19 @@ document.querySelectorAll('.vib-sw').forEach(sw => {
         if (s !== sw) s.checked = false;
       });
       state.vibration = vol;
-      addLog(`Getaran diaktifkan Volume ${vol}`);
+      pushLogToSupabase(`Getaran diaktifkan Volume ${vol}`);
       showToast(`〜 Getaran Volume ${vol} ON`);
     } else {
       state.vibration = null;
-      addLog('Getaran dimatikan');
+      pushLogToSupabase('Getaran dimatikan');
       showToast('Getaran OFF');
     }
     document.getElementById('mini-vib').textContent = state.vibration ? `Vol ${state.vibration}` : 'OFF';
+    
+    // Tembak perubahan status ke database cloud
+    updateDeviceControl();
   });
 });
-
-/* ── LOG ── */
-function addLog(aksi) {
-  if (!state.profile) return;
-  state.logs.push({
-    waktu:   nowStr(),
-    nama:    state.profile.nama,
-    umur:    state.profile.umur,
-    tanggal: state.profile.tanggal,
-    gender:  state.profile.gender,
-    suhu:    state.sensorTemp !== null ? state.sensorTemp + '°C' : '-',
-    pemanas: state.heaterTemp ? state.heaterTemp + '°C' : '-',
-    getaran: state.vibration  ? `Volume ${state.vibration}` : '-',
-    aksi,
-  });
-}
-
-function nowStr() {
-  const d = new Date();
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
-}
 
 /* ── RENDER LOG CARDS ── */
 function renderLogs() {
@@ -320,7 +383,7 @@ function renderLogs() {
         </div>
         <div class="log-meta-item">
           <span class="lm-lbl">Tgl Input</span>
-          <span class="lm-val">${log.tanggal}</span>
+          <span class="lm-val">${log.tanggal_input || log.tanggal}</span>
         </div>
       </div>
       <div class="log-aksi">${log.aksi}</div>
@@ -336,7 +399,12 @@ function renderLogs() {
   });
 }
 
-/* ── DOWNLOAD EXCEL (CSV + BOM) ── */
+function nowStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+}
+
+/* ── DOWNLOAD EXCEL ── */
 document.getElementById('btn-download').addEventListener('click', () => {
   if (state.logs.length === 0) { showToast('⚠ Tidak ada data'); return; }
 
@@ -348,7 +416,7 @@ document.getElementById('btn-download').addEventListener('click', () => {
     : '-';
 
   const rows = state.logs.map((l, i) => [
-    i+1, l.waktu, l.nama, l.umur, l.tanggal, l.gender, l.suhu, l.pemanas, l.getaran, l.aksi
+    i+1, l.waktu, l.nama, l.umur, l.tanggal_input || l.tanggal, l.gender, l.suhu, l.pemanas, l.getaran, l.aksi
   ]);
 
   const lines = [
@@ -411,23 +479,23 @@ function hardReset() {
   state.heaterTemp = 37;
   state.vibration  = null;
 
-  // Clear input fields
   document.getElementById('inp-nama').value    = '';
   document.getElementById('inp-umur').value    = '';
-  document.getElementById('inp-tanggal').value = todayStr();
+  const inpTgl = document.getElementById('inp-tanggal');
+  if (inpTgl) inpTgl.value = todayStr();
   document.getElementById('hero-greeting').textContent = 'Halo, Siapa kamu?';
   document.getElementById('hero-avatar').textContent   = '👤';
 
-  // Reset gender
   genderGroup.querySelectorAll('.gender-btn').forEach((b,i) => b.classList.toggle('active', i===0));
   selectedGender = 'Pria';
 
-  // Reset heater (default first ON)
   document.querySelectorAll('.heater-sw').forEach((s,i) => s.checked = (i===0));
   document.querySelectorAll('.vib-sw').forEach(s => s.checked = false);
 
   drawGauge(null);
+  updateDeviceControl();
 }
 
-/* ── INIT ── */
+/* ── INIT ON LOAD ── */
 drawGauge(null);
+initSupabaseRealtime();
