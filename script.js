@@ -7,14 +7,14 @@ const SUPABASE_URL = "https://zyogoissymtonfkyjqxf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3uDWsaihi6doAxFdmC_VKA_GG-_aD36";
 const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-/* ── STATE ── */
-let state = {
-  profile: null,
-  logs: [],
-  sensorTemp: null,   // Nilai dibaca live dari database Supabase
-  heaterTemp: 37,     // Default awal aktif
-  vibration: null,    
-};
+// /* ── STATE ── */
+// let state = {
+//   profile: null,
+//   logs: [],
+//   sensorTemp: null,   // Nilai dibaca live dari database Supabase
+//   heaterTemp: 37,     // Default awal aktif
+//   vibration: null,    
+// };
 
 const DEVICE_ID = 1; // ID Baris status alat pada tabel device_status
 
