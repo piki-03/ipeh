@@ -1,6 +1,4 @@
-/* ==============================
-   S-HOME IoT — script.js
-   ============================== */
+
 
 'use strict';
 
@@ -354,7 +352,7 @@ document.getElementById('btn-download').addEventListener('click', () => {
   ]);
 
   const lines = [
-    esc('S-HOME IoT Dashboard — Log Data'),
+    esc('G-Genumax Dashboard — Log Data'),
     esc(profileInfo),
     esc(`Digenerate: ${nowStr()}`),
     '',
