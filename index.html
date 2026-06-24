@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>S-Home IoT</title>
+  <title>Genumax</title>
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet" />
 </head>
@@ -25,7 +25,7 @@
         <div class="page-topbar">
           <div class="topbar-logo">
             <div class="logo-pill">⌂</div>
-            <span class="logo-name">S-Home</span>
+            <span class="logo-name">G-Genumax</span>
           </div>
           <div class="topbar-bell">🔔</div>
         </div>
@@ -46,11 +46,11 @@
 
           <div class="field-group">
             <label class="field-label">Input Umur</label>
-            <input class="field-input" id="inp-umur" type="number" min="1" max="120" placeholder="Input Teks" inputmode="numeric" />
+            <input class="field-input" id="inp-umur" type="number" min="1" max="120" placeholder="Input Umur" inputmode="numeric" />
           </div>
 
           <div class="field-group">
-            <label class="field-label">Input Tanggal Lahir</label>
+            <label class="field-label">Input Tanggal Terapi</label>
             <div class="date-wrapper">
               <span class="date-ico">📅</span>
               <input class="field-input date-inp" id="inp-tanggal" type="date" />
@@ -82,19 +82,19 @@
         <div class="page-topbar">
           <div class="topbar-logo">
             <div class="logo-pill">⌂</div>
-            <span class="logo-name">S-Home</span>
+            <span class="logo-name">G-Genumax</span>
           </div>
           <div class="topbar-bell">🔔</div>
         </div>
 
         <div class="dash-greeting">
           <p class="dash-hello" id="dash-hello">Hello 👋</p>
-          <p class="dash-sub">Welcome to your home.</p>
+          <p class="dash-sub">Welcome to your dashboard.</p>
         </div>
 
         <!-- Gauge suhu mandiri -->
         <div class="gauge-card">
-          <div class="gauge-card-label">Sensor Suhu Ruangan</div>
+          <div class="gauge-card-label">Sensor Suhu Lutut</div>
           <div class="gauge-outer">
             <canvas id="gaugeCanvas" width="240" height="140"></canvas>
             <div class="gauge-center">
@@ -109,13 +109,13 @@
         <div class="control-card">
           <div class="control-card-head">
             <span class="ctrl-icon">⚡</span>
-            <span>Pengatur Pemanas</span>
+            <span>Pengatur Panas Terapi</span>
           </div>
           <div class="switch-list">
             <div class="switch-row">
               <div class="sw-info">
                 <span class="sw-name">Pemanas 37°C</span>
-                <span class="sw-desc">Hangat ringan</span>
+                <span class="sw-desc">Intensitas rendah</span>
               </div>
               <label class="sw-toggle">
                 <input type="checkbox" class="heater-sw" data-temp="37" checked />
@@ -125,7 +125,7 @@
             <div class="switch-row">
               <div class="sw-info">
                 <span class="sw-name">Pemanas 40°C</span>
-                <span class="sw-desc">Terapi medium</span>
+                <span class="sw-desc">Intensitas sedang</span>
               </div>
               <label class="sw-toggle">
                 <input type="checkbox" class="heater-sw" data-temp="40" />
@@ -149,7 +149,7 @@
         <div class="control-card">
           <div class="control-card-head">
             <span class="ctrl-icon">〜</span>
-            <span>Pengatur Getaran</span>
+            <span>Pengatur Getar Terapi</span>
           </div>
           <div class="switch-list">
             <div class="switch-row">
