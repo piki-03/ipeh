@@ -7,26 +7,29 @@ const SUPABASE_URL = "https://zyogoissymtonfkyjqxf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3uDWsaihi6doAxFdmC_VKA_GG-_aD36";
 const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-// /* ── STATE ── */
-// let state = {
-//   profile: null,
-//   logs: [],
-//   sensorTemp: null,   // Nilai dibaca live dari database Supabase
-//   heaterTemp: 37,     // Default awal aktif
-//   vibration: null,    
-// };
+// window.supabase adalah objek bawaan dari CDN, kita tampung ke variabel baru yang aman
+const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
-const DEVICE_ID = 1; // ID Baris status alat pada tabel device_status
+/* ── STATE ── */
+let state = {
+  profile: null,
+  logs: [],
+  sensorTemp: null,   
+  heaterTemp: 37,     
+  vibration: null,    
+};
+
+const DEVICE_ID = 1; 
 
 /* ── INITIALIZE SUPABASE REALTIME ── */
 async function initSupabaseRealtime() {
-  if (!supabase) {
+  if (!supabaseClient) { // Sesuaikan ke nama variabel baru
     console.error("Supabase SDK gagal dimuat!");
     return;
   }
 
   // 1. Ambil data awal dari database saat aplikasi dibuka
-  const { data, error } = await supabase
+  const { data, error } = await supabaseClient
     .from('device_status')
     .select('*')
     .eq('id', DEVICE_ID)
@@ -34,14 +37,13 @@ async function initSupabaseRealtime() {
 
   if (!error && data) {
     state.sensorTemp = data.sensor_temp;
-    // Sinkronisasi status awal dari DB ke UI jika diperlukan
     if (data.heater_pwm) state.heaterTemp = data.heater_pwm;
     if (data.vibration_pwm) state.vibration = data.vibration_pwm;
     refreshDash();
   }
 
-  // 2. Berlangganan (Subscribe) Perubahan Realtime dari ESP32 (Kolom sensor_temp)
-  supabase
+  // 2. Berlangganan (Subscribe) Perubahan Realtime
+  supabaseClient
     .channel('schema-db-changes')
     .on(
       'postgres_changes',
@@ -50,7 +52,6 @@ async function initSupabaseRealtime() {
         const newData = payload.new;
         state.sensorTemp = newData.sensor_temp;
         
-        // Auto-refresh jika user sedang di halaman dashboard
         if (document.getElementById('page-dashboard').classList.contains('active')) {
           refreshDash();
         }
@@ -61,7 +62,7 @@ async function initSupabaseRealtime() {
 
 /* ── LOG KE DATABASE CLOUD ── */
 async function pushLogToSupabase(aksi) {
-  if (!state.profile || !supabase) return;
+  if (!state.profile || !supabaseClient) return; // Sesuaikan ke nama variabel baru
 
   const logData = {
     nama: state.profile.nama,
@@ -74,11 +75,9 @@ async function pushLogToSupabase(aksi) {
     aksi: aksi
   };
 
-  // Simpan ke tabel cloud Supabase
-  const { error } = await supabase.from('therapy_logs').insert([logData]);
+  const { error } = await supabaseClient.from('therapy_logs').insert([logData]); // Sesuaikan ke nama variabel baru
   if (error) console.error("Gagal menyimpan log ke cloud:", error);
 
-  // Tetap masukkan ke state lokal untuk performa UI instan di halaman riwayat
   state.logs.push({
     waktu: nowStr(),
     ...logData,
@@ -86,11 +85,11 @@ async function pushLogToSupabase(aksi) {
   });
 }
 
-/* ── UPDATE REMOTE CONTROL (Kirim Data ke ESP32 via DB) ── */
+/* ── UPDATE REMOTE CONTROL ── */
 async function updateDeviceControl() {
-  if (!supabase) return;
+  if (!supabaseClient) return; // Sesuaikan ke nama variabel baru
 
-  const { error } = await supabase
+  const { error } = await supabaseClient // Sesuaikan ke nama variabel baru
     .from('device_status')
     .update({ 
       heater_pwm: state.heaterTemp ? state.heaterTemp : 0, 
