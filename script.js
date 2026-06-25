@@ -464,7 +464,13 @@ function renderLogs() {
     return;
   }
 
-  list.innerHTML = state.logs.map((log, i) => `
+  // Tampilkan log terbaru di PALING ATAS. Urutan penyimpanan asli (state.logs)
+  // tetap kronologis (lama → baru) supaya export Excel & penomoran tetap konsisten;
+  // di sini kita cuma balik urutan TAMPILAN-nya saja.
+  const total = state.logs.length;
+  list.innerHTML = state.logs.slice().reverse().map((log, revIdx) => {
+    const i = total - 1 - revIdx; // index asli di state.logs, untuk nomor & tombol Hapus
+    return `
     <div class="log-card">
       <div class="log-card-top">
         <span class="log-num">#${i + 1}</span>
@@ -500,7 +506,8 @@ function renderLogs() {
       </div>
       <div class="log-aksi">${log.aksi}</div>
     </div>
-  `).join('');
+  `;
+  }).join('');
 
   list.querySelectorAll('.log-del').forEach(btn => {
     btn.addEventListener('click', () => {
