@@ -12,11 +12,14 @@ let state = {
   profile: null,
   logs: [],
   sensorTemp: null,   // Nilai dibaca live dari database Supabase
-  heaterTemp: null,     // Default awal aktif
-  vibration: null,    
+  heaterTemp: null,   // null = OFF (posisi awal semua saklar pemanas OFF)
+  vibration: null,    // null = OFF (posisi awal semua saklar getaran OFF)
+  timerEndAt: null,   // timestamp (ms) kapan sesi 15 menit berakhir, null jika tidak berjalan
+  timerInterval: null,
 };
 
 const DEVICE_ID = 1; // ID Baris status alat pada tabel device_status
+const TIMER_DURATION = 15 * 60; // 15 menit dalam detik
 
 /* ── INITIALIZE SUPABASE REALTIME ── */
 async function initSupabaseRealtime() {
@@ -78,6 +81,8 @@ async function pushLogToSupabase(aksi) {
   if (error) console.error("Gagal menyimpan log ke cloud:", error);
 
   // Tetap masukkan ke state lokal untuk performa UI instan
+  // (logs TIDAK pernah dihapus otomatis — hanya bertambah, kecuali dihapus manual
+  // lewat tombol "Hapus" per-entri atau reset profil eksplisit di halaman Profile)
   state.logs.push({
     waktu: nowStr(),
     ...logData,
@@ -177,9 +182,10 @@ document.getElementById('btn-start').addEventListener('click', () => {
   if (!umur || isNaN(+umur) || +umur < 1) { showToast('⚠ Umur tidak valid'); return; }
   if (!tanggal)                      { showToast('⚠ Tanggal harus diisi'); return; }
 
-  if (state.profile && state.profile.nama !== nama) {
-    if (!confirm(`Profil aktif: "${state.profile.nama}". Ganti profil akan hapus semua log. Lanjutkan?`)) return;
-    hardReset();
+  // Setiap kali user mengisi input (sesi baru), kontrol pemanas/getaran/timer
+  // dikembalikan ke posisi awal OFF — TAPI log riwayat yang sudah ada TIDAK dihapus.
+  if (state.profile) {
+    resetSessionControls();
   }
 
   state.profile = { nama, umur: +umur, tanggal, gender: selectedGender };
@@ -308,6 +314,13 @@ document.querySelectorAll('.heater-sw').forEach(sw => {
     document.getElementById('mini-heat').textContent = state.heaterTemp ? `${state.heaterTemp}°C` : 'OFF';
     
     updateDeviceControl();
+
+    // Jika sesi 15 menit sedang berjalan dan pemanas dimatikan manual, hentikan sesi
+    if (state.timerEndAt && state.heaterTemp === null) {
+      finishTherapyTimer('manual');
+    } else {
+      updateTimerButtonState();
+    }
   });
 });
 
@@ -330,7 +343,110 @@ document.querySelectorAll('.vib-sw').forEach(sw => {
     document.getElementById('mini-vib').textContent = state.vibration ? `Vol ${state.vibration}` : 'OFF';
     
     updateDeviceControl();
+
+    // Jika sesi 15 menit sedang berjalan dan getaran dimatikan manual, hentikan sesi
+    if (state.timerEndAt && state.vibration === null) {
+      finishTherapyTimer('manual');
+    } else {
+      updateTimerButtonState();
+    }
   });
+});
+
+/* ── TIMER SESI TERAPI 15 MENIT ── */
+const btnTimer     = document.getElementById('btn-timer');
+const timerDisplay = document.getElementById('timer-display');
+const timerHint    = document.getElementById('timer-hint');
+const btnTimerIcon  = document.getElementById('btn-timer-icon');
+const btnTimerLabel = document.getElementById('btn-timer-label');
+
+function formatMMSS(totalSec) {
+  const m = Math.floor(totalSec / 60);
+  const s = totalSec % 60;
+  return `${pad(m)}:${pad(s)}`;
+}
+
+// Aktif/nonaktifkan tombol "Mulai 15 Menit" berdasarkan pemanas & getaran sudah dipilih atau belum
+function updateTimerButtonState() {
+  if (state.timerEndAt) return; // sedang berjalan, biarkan tampilan "Hentikan Sesi"
+  const ready = state.heaterTemp !== null && state.vibration !== null;
+  btnTimer.disabled = !ready;
+  timerHint.textContent = ready
+    ? 'Siap memulai sesi terapi 15 menit'
+    : 'Pilih pemanas & getaran dahulu';
+}
+
+function tickTimer() {
+  const remaining = Math.round((state.timerEndAt - Date.now()) / 1000);
+  if (remaining <= 0) {
+    finishTherapyTimer('auto');
+    return;
+  }
+  timerDisplay.textContent = formatMMSS(remaining);
+}
+
+function startTherapyTimer() {
+  if (state.timerEndAt) return; // sudah berjalan
+  if (state.heaterTemp === null || state.vibration === null) {
+    showToast('⚠ Pilih pemanas & getaran terlebih dahulu');
+    return;
+  }
+
+  state.timerEndAt = Date.now() + TIMER_DURATION * 1000;
+
+  timerDisplay.classList.add('running');
+  timerHint.textContent = 'Sesi terapi sedang berjalan...';
+  btnTimer.classList.add('running');
+  btnTimer.disabled = false;
+  btnTimerIcon.textContent  = '■';
+  btnTimerLabel.textContent = 'Hentikan Sesi';
+
+  pushLogToSupabase(`Mulai sesi terapi 15 menit (Pemanas ${state.heaterTemp}°C, Getaran Volume ${state.vibration})`);
+  showToast('✓ Sesi terapi 15 menit dimulai');
+
+  tickTimer();
+  state.timerInterval = setInterval(tickTimer, 1000);
+}
+
+function finishTherapyTimer(reason) {
+  // reason: 'auto' (15 menit habis) atau 'manual' (dihentikan/diinterupsi user)
+  clearInterval(state.timerInterval);
+  state.timerInterval = null;
+  state.timerEndAt = null;
+
+  // Matikan pemanas (kirim OFF ke ESP32)
+  document.querySelectorAll('.heater-sw').forEach(s => s.checked = false);
+  state.heaterTemp = null;
+
+  // Matikan getaran (kirim OFF ke ESP32)
+  document.querySelectorAll('.vib-sw').forEach(s => s.checked = false);
+  state.vibration = null;
+
+  updateDeviceControl();
+
+  document.getElementById('mini-heat').textContent = 'OFF';
+  document.getElementById('mini-vib').textContent  = 'OFF';
+
+  timerDisplay.classList.remove('running');
+  timerDisplay.textContent = formatMMSS(TIMER_DURATION);
+  btnTimer.classList.remove('running');
+  btnTimerIcon.textContent  = '▶';
+  btnTimerLabel.textContent = 'Mulai 15 Menit';
+
+  pushLogToSupabase(reason === 'auto'
+    ? 'Sesi 15 menit selesai — pemanas & getaran otomatis OFF'
+    : 'Sesi terapi dihentikan manual — pemanas & getaran OFF');
+  showToast(reason === 'auto' ? '⏱ 15 menit selesai, perangkat OFF' : 'Sesi dihentikan, perangkat OFF');
+
+  updateTimerButtonState();
+}
+
+btnTimer.addEventListener('click', () => {
+  if (state.timerEndAt) {
+    finishTherapyTimer('manual');
+  } else {
+    startTherapyTimer();
+  }
 });
 
 /* ── RENDER LOG CARDS ── */
@@ -446,7 +562,7 @@ function renderProfile() {
     document.getElementById('profile-badge').textContent  = '—';
     document.getElementById('pstat-umur').textContent     = '—';
     document.getElementById('pstat-tgl').textContent      = '—';
-    document.getElementById('pstat-log').textContent      = 0;
+    document.getElementById('pstat-log').textContent      = state.logs.length;
     return;
   }
   document.getElementById('profile-avatar').textContent = p.nama.charAt(0).toUpperCase();
@@ -457,7 +573,26 @@ function renderProfile() {
   document.getElementById('pstat-log').textContent      = state.logs.length;
 }
 
-/* ── RESET ── */
+/* ── RESET KONTROL SESI (dipanggil setiap kali user mengisi Input lagi) ──
+   Mengembalikan saklar pemanas, saklar getaran, dan timer ke posisi awal OFF.
+   TIDAK menghapus log riwayat — log lama tetap tersimpan, log baru ditambahkan. */
+function resetSessionControls() {
+  if (state.timerEndAt) {
+    finishTherapyTimer('manual');
+  }
+  state.heaterTemp = null;
+  state.vibration  = null;
+  document.querySelectorAll('.heater-sw').forEach(s => s.checked = false);
+  document.querySelectorAll('.vib-sw').forEach(s => s.checked = false);
+  document.getElementById('mini-heat').textContent = 'OFF';
+  document.getElementById('mini-vib').textContent  = 'OFF';
+  updateTimerButtonState();
+  updateDeviceControl();
+}
+
+/* ── RESET PROFIL (eksplisit, dari halaman Profile) ──
+   Tombol "Ganti Profil & Hapus Log" — INI satu-satunya aksi yang menghapus log riwayat,
+   sesuai label & peringatan pada tombolnya. */
 document.getElementById('btn-reset-profile').addEventListener('click', () => {
   if (!state.profile) { showToast('⚠ Belum ada profil aktif'); return; }
   if (!confirm('Semua log akan dihapus dan profil direset. Lanjutkan?')) return;
@@ -469,6 +604,11 @@ document.getElementById('btn-reset-profile').addEventListener('click', () => {
 });
 
 function hardReset() {
+  // Hentikan timer jika berjalan, tanpa mengirim log baru (semua log akan dihapus)
+  if (state.timerInterval) clearInterval(state.timerInterval);
+  state.timerInterval = null;
+  state.timerEndAt    = null;
+
   state.profile    = null;
   state.logs       = [];
   state.sensorTemp = null;
@@ -485,8 +625,18 @@ function hardReset() {
   genderGroup.querySelectorAll('.gender-btn').forEach((b,i) => b.classList.toggle('active', i===0));
   selectedGender = 'Pria';
 
-  document.querySelectorAll('.heater-sw').forEach((s,i) => s.checked = (i===0));
+  // Posisi awal: semua saklar pemanas & getaran OFF
+  document.querySelectorAll('.heater-sw').forEach(s => s.checked = false);
   document.querySelectorAll('.vib-sw').forEach(s => s.checked = false);
+  document.getElementById('mini-heat').textContent = 'OFF';
+  document.getElementById('mini-vib').textContent  = 'OFF';
+
+  timerDisplay.classList.remove('running');
+  timerDisplay.textContent = formatMMSS(TIMER_DURATION);
+  btnTimer.classList.remove('running');
+  btnTimerIcon.textContent  = '▶';
+  btnTimerLabel.textContent = 'Mulai 15 Menit';
+  updateTimerButtonState();
 
   drawGauge(null);
   updateDeviceControl();
@@ -494,4 +644,5 @@ function hardReset() {
 
 /* ── INIT ON LOAD ── */
 drawGauge(null);
+updateTimerButtonState();
 initSupabaseRealtime();

@@ -118,7 +118,7 @@
                 <span class="sw-desc">Intensitas rendah</span>
               </div>
               <label class="sw-toggle">
-                <input type="checkbox" class="heater-sw" data-temp="37" checked />
+                <input type="checkbox" class="heater-sw" data-temp="37" />
                 <span class="sw-track"><span class="sw-thumb"></span></span>
               </label>
             </div>
@@ -183,6 +183,19 @@
               </label>
             </div>
           </div>
+        </div>
+
+        <!-- Timer Sesi Terapi 15 Menit -->
+        <div class="control-card timer-card">
+          <div class="control-card-head">
+            <span class="ctrl-icon">⏱</span>
+            <span>Sesi Terapi</span>
+          </div>
+          <div class="timer-display" id="timer-display">15:00</div>
+          <p class="timer-hint" id="timer-hint">Pilih pemanas &amp; getaran dahulu</p>
+          <button class="btn-timer" id="btn-timer" disabled>
+            <span id="btn-timer-icon">▶</span> <span id="btn-timer-label">Mulai 15 Menit</span>
+          </button>
         </div>
 
         <!-- Mini stats -->
@@ -267,7 +280,7 @@
         </div>
 
         <div class="profile-action-card">
-          <p class="action-warn">⚠ Mengganti profil akan menghapus semua data log yang tersimpan dan memulai sesi baru.</p>
+          <p class="action-warn">⚠ Mengganti profil tidak akan menghapus log riwayat. Log lama tetap tersimpan, sesi baru akan ditambahkan ke riwayat.</p>
           <button class="btn-reset" id="btn-reset-profile">↺ Ganti Profil &amp; Hapus Log</button>
         </div>
 
