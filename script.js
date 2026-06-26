@@ -504,8 +504,9 @@ function renderLogs() {
           <span class="lm-val">${log.tanggal_input || log.tanggal}</span>
         </div>
       </div>
-      <div class="log-aksi">${log.aksi}</div>
-    </div>
+      <div class="log-aksi ${log.aksi === 'Pencatatan berkala otomatis' ? 'system-log' : ''}">
+        ${log.aksi === 'Pencatatan berkala otomatis' ? '🕒 ' + log.aksi : log.aksi}
+      </div>    </div>
   `;
   }).join('');
 
@@ -653,3 +654,19 @@ function hardReset() {
 drawGauge(null);
 updateTimerButtonState();
 initSupabaseRealtime();
+
+/* ── AUTOMATIC PERIODIC LOGGING (TAMBAHAN) ── */
+// Interval diatur ke 5 menit (3 * 60 * 1000 milidetik)
+const LOG_INTERVAL_MS = 5 * 60 * 1000; 
+
+setInterval(() => {
+  // Logika: Hanya kirim log otomatis jika profil pasien sudah diisi/aktif
+  if (state.profile) {
+    pushLogToSupabase('Pencatatan berkala otomatis');
+    
+    // Opsional: Perbarui halaman riwayat secara instan jika user sedang membuka menu riwayat
+    if (document.getElementById('page-riwayat').classList.contains('active')) {
+      renderLogs();
+    }
+  }
+}, LOG_INTERVAL_MS);
