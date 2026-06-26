@@ -126,7 +126,7 @@ html, body {
   border-radius: 50%;
   /* Membuat logo berbentuk bulat, hapus baris ini jika ingin kotak */
   overflow: hidden;
-  background-image: url('logo.png');
+  background-image: url('logo.jpeg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
