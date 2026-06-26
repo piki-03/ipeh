@@ -120,19 +120,18 @@ html, body {
 .topbar-logo { display: flex; align-items: center; gap: 8px; }
 .logo-pill {
   width: 32px;
-  /* Sesuaikan ukuran lebar wadah logo */
   height: 32px;
-  /* Sesuaikan ukuran tinggi wadah logo */
   border-radius: 50%;
-  /* Membuat logo berbentuk bulat, hapus baris ini jika ingin kotak */
   overflow: hidden;
   background-image: url('logo.jpeg');
+  /* Sesuaikan jika nama file Anda logo.jpg atau logo.jpeg */
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
-  text-indent: -9999px;
-  /* Menyembunyikan karakter teks bawaan seperti ⌂ atau ◉ */
   display: inline-block;
+  vertical-align: middle;
+  color: transparent;
+  /* Membuat teks bawaan HTML menjadi tidak terlihat */
 }
 .logo-name {
   font-family: var(--font-d);

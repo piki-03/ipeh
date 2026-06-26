@@ -1,271 +1,346 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>Knee Therap</title>
+    <link rel="stylesheet" href="style.css" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@700;900&display=swap"
+      rel="stylesheet"
+    />
+  </head>
 
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Knee Therap</title>
-  <link rel="stylesheet" href="style.css" />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Orbitron:wght@700;900&display=swap"
-    rel="stylesheet" />
-</head>
+  <body>
+    <div class="phone-shell">
+      <div class="status-bar">
+        <span class="status-time" id="status-time">09:41</span>
+      </div>
 
-<body>
-
-  <div class="phone-shell">
-
-    <div class="status-bar">
-      <span class="status-time" id="status-time">09:41</span>
-    </div>
-
-    <div class="phone-body">
-
-      <section class="page active" id="page-input">
-        <div class="page-topbar">
-          <div class="topbar-logo">
-            <div class="logo-pill">⌂</div>
-            <span class="logo-name">Knee Therap</span>
-          </div>
-        </div>
-
-        <div class="input-hero">
-          <div class="hero-avatar" id="hero-avatar">👤</div>
-          <p class="hero-greeting" id="hero-greeting">Halo, Silahkan Input Data Diri Anda?</p>
-        </div>
-
-        <div class="form-section">
-          <div class="section-head">Personal Info</div>
-
-          <div class="field-group">
-            <label class="field-label">Input Nama</label>
-            <input class="field-input" id="inp-nama" type="text" placeholder="Input Nama" autocomplete="off" />
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Input Umur</label>
-            <input class="field-input" id="inp-umur" type="number" min="1" max="120" placeholder="Input Umur"
-              inputmode="numeric" />
-          </div>
-
-          <div class="field-group">
-            <label class="field-label">Input Tanggal Terapi</label>
-            <div class="date-wrapper">
-              <span class="date-ico">📅</span>
-              <input class="field-input date-inp" id="inp-tanggal" type="date" />
+      <div class="phone-body">
+        <section class="page active" id="page-input">
+          <div class="page-topbar">
+            <div class="topbar-logo">
+              <img
+                src="logo.jpeg"
+                alt="Logo Knee Therap"
+                style="
+                  width: 32px;
+                  height: 32px;
+                  object-fit: cover;
+                  border-radius: 50%;
+                  display: inline-block;
+                  vertical-align: middle;
+                "
+              />
+              <span class="logo-name">Knee Therap</span>
             </div>
           </div>
-        </div>
 
-        <div class="form-section" style="margin-top:4px">
-          <div class="section-head">Informasi Lanjutan</div>
+          <div class="input-hero">
+            <div class="hero-avatar" id="hero-avatar">👤</div>
+            <p class="hero-greeting" id="hero-greeting">
+              Halo, Silahkan Input Data Diri Anda?
+            </p>
+          </div>
 
-          <div class="field-group">
-            <label class="field-label">Jenis Kelamin</label>
-            <div class="gender-row" id="gender-group">
-              <button class="gender-btn active" data-value="Pria">Pria</button>
-              <button class="gender-btn" data-value="Wanita">Wanita</button>
+          <div class="form-section">
+            <div class="section-head">Personal Info</div>
+
+            <div class="field-group">
+              <label class="field-label">Input Nama</label>
+              <input
+                class="field-input"
+                id="inp-nama"
+                type="text"
+                placeholder="Input Nama"
+                autocomplete="off"
+              />
             </div>
-          </div>
-        </div>
 
-        <div class="start-wrap">
-          <button class="btn-start" id="btn-start">
-            <span>✦</span> Mulai
-          </button>
-        </div>
-      </section>
-
-      <section class="page" id="page-dashboard">
-        <div class="page-topbar">
-          <div class="topbar-logo">
-            <div class="logo-pill">⌂</div>
-            <span class="logo-name">Knee Therap</span>
-          </div>
-        </div>
-
-        <div class="dash-greeting">
-          <p class="dash-hello" id="dash-hello">Hello 👋</p>
-          <p class="dash-sub">Welcome to your dashboard.</p>
-        </div>
-
-        <div class="gauge-card">
-          <div class="gauge-card-label">Sensor Suhu Terapi</div>
-          <div class="gauge-outer">
-            <canvas id="gaugeCanvas" width="240" height="140"></canvas>
-            <div class="gauge-center">
-              <div class="gauge-val" id="gauge-val">--</div>
-              <div class="gauge-unit">°C</div>
+            <div class="field-group">
+              <label class="field-label">Input Umur</label>
+              <input
+                class="field-input"
+                id="inp-umur"
+                type="number"
+                min="1"
+                max="120"
+                placeholder="Input Umur"
+                inputmode="numeric"
+              />
             </div>
-          </div>
-          <div class="gauge-db-note">Nilai dari database sensor</div>
-        </div>
 
-        <div class="control-card">
-          <div class="control-card-head">
-            <span class="ctrl-icon">⚡</span>
-            <span>Pengatur Panas Terapi</span>
-          </div>
-          <div class="switch-list">
-            <div class="switch-row">
-              <div class="sw-info">
-                <span class="sw-name">Pemanas</span>
-                <span class="sw-desc">Matikan / Aktifkan Pemanas</span>
+            <div class="field-group">
+              <label class="field-label">Input Tanggal Terapi</label>
+              <div class="date-wrapper">
+                <span class="date-ico">📅</span>
+                <input
+                  class="field-input date-inp"
+                  id="inp-tanggal"
+                  type="date"
+                />
               </div>
-              <label class="sw-toggle">
-                <input type="checkbox" id="heater-toggle" />
-                <span class="sw-track"><span class="sw-thumb"></span></span>
-              </label>
             </div>
           </div>
-        </div>
 
-        <div class="control-card">
-          <div class="control-card-head">
-            <span class="ctrl-icon">〜</span>
-            <span>Pengatur Getar Terapi</span>
-          </div>
-          <div class="switch-list">
-            <div class="switch-row">
-              <div class="sw-info">
-                <span class="sw-name">Volume 1</span>
-                <span class="sw-desc">Getaran lemah</span>
+          <div class="form-section" style="margin-top: 4px">
+            <div class="section-head">Informasi Lanjutan</div>
+
+            <div class="field-group">
+              <label class="field-label">Jenis Kelamin</label>
+              <div class="gender-row" id="gender-group">
+                <button class="gender-btn active" data-value="Pria">
+                  Pria
+                </button>
+                <button class="gender-btn" data-value="Wanita">Wanita</button>
               </div>
-              <label class="sw-toggle">
-                <input type="checkbox" class="vib-sw" data-vol="1" />
-                <span class="sw-track"><span class="sw-thumb"></span></span>
-              </label>
             </div>
-            <div class="switch-row">
-              <div class="sw-info">
-                <span class="sw-name">Volume 2</span>
-                <span class="sw-desc">Getaran sedang</span>
+          </div>
+
+          <div class="start-wrap">
+            <button class="btn-start" id="btn-start">
+              <span>✦</span> Mulai
+            </button>
+          </div>
+        </section>
+
+        <section class="page" id="page-dashboard">
+          <div class="page-topbar">
+            <div class="topbar-logo">
+              <img
+                src="logo.jpeg"
+                alt="Logo Knee Therap"
+                style="
+                  width: 32px;
+                  height: 32px;
+                  object-fit: cover;
+                  border-radius: 50%;
+                  display: inline-block;
+                  vertical-align: middle;
+                "
+              />
+              <span class="logo-name">Knee Therap</span>
+            </div>
+          </div>
+
+          <div class="dash-greeting">
+            <p class="dash-hello" id="dash-hello">Hello 👋</p>
+            <p class="dash-sub">Welcome to your dashboard.</p>
+          </div>
+
+          <div class="gauge-card">
+            <div class="gauge-card-label">Sensor Suhu Terapi</div>
+            <div class="gauge-outer">
+              <canvas id="gaugeCanvas" width="240" height="140"></canvas>
+              <div class="gauge-center">
+                <div class="gauge-val" id="gauge-val">--</div>
+                <div class="gauge-unit">°C</div>
               </div>
-              <label class="sw-toggle">
-                <input type="checkbox" class="vib-sw" data-vol="2" />
-                <span class="sw-track"><span class="sw-thumb"></span></span>
-              </label>
             </div>
-            <div class="switch-row">
-              <div class="sw-info">
-                <span class="sw-name">Volume 3</span>
-                <span class="sw-desc">Getaran kuat</span>
+            <div class="gauge-db-note">Nilai dari database sensor</div>
+          </div>
+
+          <div class="control-card">
+            <div class="control-card-head">
+              <span class="ctrl-icon">⚡</span>
+              <span>Pengatur Panas Terapi</span>
+            </div>
+            <div class="switch-list">
+              <div class="switch-row">
+                <div class="sw-info">
+                  <span class="sw-name">Pemanas</span>
+                  <span class="sw-desc">Matikan / Aktifkan Pemanas</span>
+                </div>
+                <label class="sw-toggle">
+                  <input type="checkbox" id="heater-toggle" />
+                  <span class="sw-track"><span class="sw-thumb"></span></span>
+                </label>
               </div>
-              <label class="sw-toggle">
-                <input type="checkbox" class="vib-sw" data-vol="3" />
-                <span class="sw-track"><span class="sw-thumb"></span></span>
-              </label>
             </div>
           </div>
-        </div>
 
-        <div class="control-card timer-card">
-          <div class="control-card-head">
-            <span class="ctrl-icon">⏱</span>
-            <span>Sesi Terapi</span>
+          <div class="control-card">
+            <div class="control-card-head">
+              <span class="ctrl-icon">〜</span>
+              <span>Pengatur Getar Terapi</span>
+            </div>
+            <div class="switch-list">
+              <div class="switch-row">
+                <div class="sw-info">
+                  <span class="sw-name">Volume 1</span>
+                  <span class="sw-desc">Getaran lemah</span>
+                </div>
+                <label class="sw-toggle">
+                  <input type="checkbox" class="vib-sw" data-vol="1" />
+                  <span class="sw-track"><span class="sw-thumb"></span></span>
+                </label>
+              </div>
+              <div class="switch-row">
+                <div class="sw-info">
+                  <span class="sw-name">Volume 2</span>
+                  <span class="sw-desc">Getaran sedang</span>
+                </div>
+                <label class="sw-toggle">
+                  <input type="checkbox" class="vib-sw" data-vol="2" />
+                  <span class="sw-track"><span class="sw-thumb"></span></span>
+                </label>
+              </div>
+              <div class="switch-row">
+                <div class="sw-info">
+                  <span class="sw-name">Volume 3</span>
+                  <span class="sw-desc">Getaran kuat</span>
+                </div>
+                <label class="sw-toggle">
+                  <input type="checkbox" class="vib-sw" data-vol="3" />
+                  <span class="sw-track"><span class="sw-thumb"></span></span>
+                </label>
+              </div>
+            </div>
           </div>
-          <div class="timer-display" id="timer-display">15:00</div>
-          <p class="timer-hint" id="timer-hint">Pilih pemanas &amp; getaran dahulu</p>
-          <button class="btn-timer" id="btn-timer" disabled>
-            <span id="btn-timer-icon">▶</span> <span id="btn-timer-label">Mulai 15 Menit</span>
-          </button>
-        </div>
 
-        <div class="mini-row">
-          <div class="mini-tile cyan-tile">
-            <div class="mini-ico">🌡</div>
-            <div class="mini-num" id="mini-temp">--°C</div>
-            <div class="mini-lbl">Suhu Sensor</div>
+          <div class="control-card timer-card">
+            <div class="control-card-head">
+              <span class="ctrl-icon">⏱</span>
+              <span>Sesi Terapi</span>
+            </div>
+            <div class="timer-display" id="timer-display">15:00</div>
+            <p class="timer-hint" id="timer-hint">
+              Pilih pemanas &amp; getaran dahulu
+            </p>
+            <button class="btn-timer" id="btn-timer" disabled>
+              <span id="btn-timer-icon">▶</span>
+              <span id="btn-timer-label">Mulai 15 Menit</span>
+            </button>
           </div>
-          <div class="mini-tile magenta-tile">
-            <div class="mini-ico">〜</div>
-            <div class="mini-num" id="mini-vib">OFF</div>
-            <div class="mini-lbl">Getaran</div>
-          </div>
-          <div class="mini-tile gold-tile">
-            <div class="mini-ico">⚡</div>
-            <div class="mini-num" id="mini-heat">OFF</div>
-            <div class="mini-lbl">Pemanas</div>
-          </div>
-        </div>
 
-        <div style="height:24px"></div>
-      </section>
+          <div class="mini-row">
+            <div class="mini-tile cyan-tile">
+              <div class="mini-ico">🌡</div>
+              <div class="mini-num" id="mini-temp">--°C</div>
+              <div class="mini-lbl">Suhu Sensor</div>
+            </div>
+            <div class="mini-tile magenta-tile">
+              <div class="mini-ico">〜</div>
+              <div class="mini-num" id="mini-vib">OFF</div>
+              <div class="mini-lbl">Getaran</div>
+            </div>
+            <div class="mini-tile gold-tile">
+              <div class="mini-ico">⚡</div>
+              <div class="mini-num" id="mini-heat">OFF</div>
+              <div class="mini-lbl">Pemanas</div>
+            </div>
+          </div>
 
-      <section class="page" id="page-profile">
-        <div class="page-topbar">
-          <div class="topbar-logo">
-            <div class="logo-pill">◉</div>
-            <span class="logo-name">Profile</span>
-          </div>
-        </div>
+          <div style="height: 24px"></div>
+        </section>
 
-        <div class="profile-hero">
-          <div class="profile-avatar-wrap">
-            <div class="profile-avatar" id="profile-avatar">?</div>
-            <div class="avatar-ring"></div>
+        <section class="page" id="page-profile">
+          <div class="page-topbar">
+            <div class="topbar-logo">
+              <img
+                src="logo.jpeg"
+                alt="Logo Knee Therap"
+                style="
+                  width: 32px;
+                  height: 32px;
+                  object-fit: cover;
+                  border-radius: 50%;
+                  display: inline-block;
+                  vertical-align: middle;
+                "
+              />
+              <span class="logo-name">Profile</span>
+            </div>
           </div>
-          <div class="profile-name" id="profile-name">Belum ada profil</div>
-          <div class="profile-badge" id="profile-badge">—</div>
-        </div>
 
-        <div class="profile-stats-row">
-          <div class="pstat">
-            <div class="pstat-val" id="pstat-umur">—</div>
-            <div class="pstat-lbl">Umur</div>
+          <div class="profile-hero">
+            <div class="profile-avatar-wrap">
+              <div class="profile-avatar" id="profile-avatar">?</div>
+              <div class="avatar-ring"></div>
+            </div>
+            <div class="profile-name" id="profile-name">Belum ada profil</div>
+            <div class="profile-badge" id="profile-badge">—</div>
           </div>
-          <div class="pstat-div"></div>
-          <div class="pstat">
-            <div class="pstat-val" id="pstat-tgl">—</div>
-            <div class="pstat-lbl">Tgl Input</div>
-          </div>
-          <div class="pstat-div"></div>
-          <!-- <div class="pstat">
+
+          <div class="profile-stats-row">
+            <div class="pstat">
+              <div class="pstat-val" id="pstat-umur">—</div>
+              <div class="pstat-lbl">Umur</div>
+            </div>
+            <div class="pstat-div"></div>
+            <div class="pstat">
+              <div class="pstat-val" id="pstat-tgl">—</div>
+              <div class="pstat-lbl">Tgl Input</div>
+            </div>
+            <div class="pstat-div"></div>
+            <!-- <div class="pstat">
             <div class="pstat-val" id="pstat-log">—</div>
             <div class="pstat-lbl">Log</div>
           </div> -->
-        </div>
+          </div>
 
-        <div class="profile-action-card">
-          <!-- <p class="action-warn">⚠ Mengganti profil tidak akan menghapus log riwayat. Log lama tetap tersimpan, sesi
+          <div class="profile-action-card">
+            <!-- <p class="action-warn">⚠ Mengganti profil tidak akan menghapus log riwayat. Log lama tetap tersimpan, sesi
             baru akan ditambahkan ke riwayat.</p> -->
-          <button class="btn-reset" id="btn-reset-profile">↺ Ganti Profil</button>
-        </div>
+            <button class="btn-reset" id="btn-reset-profile">
+              ↺ Ganti Profil
+            </button>
+          </div>
 
-        <div style="height:24px"></div>
-      </section>
+          <div style="height: 24px"></div>
+        </section>
+      </div>
+      <nav class="bottom-nav">
+        <button class="nav-btn active" data-page="input">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <path d="M12 20h9" />
+            <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
+          </svg>
+          <span>Input</span>
+        </button>
+        <button class="nav-btn" data-page="dashboard">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <circle cx="12" cy="12" r="3" />
+            <path
+              d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83"
+            />
+          </svg>
+          <span>Dashboard</span>
+        </button>
 
+        <button class="nav-btn" data-page="profile">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <circle cx="12" cy="8" r="4" />
+            <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
+          </svg>
+          <span>Profile</span>
+        </button>
+      </nav>
     </div>
-    <nav class="bottom-nav">
-      <button class="nav-btn active" data-page="input">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <path d="M12 20h9" />
-          <path d="M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z" />
-        </svg>
-        <span>Input</span>
-      </button>
-      <button class="nav-btn" data-page="dashboard">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <circle cx="12" cy="12" r="3" />
-          <path
-            d="M12 1v4M12 19v4M4.22 4.22l2.83 2.83M16.95 16.95l2.83 2.83M1 12h4M19 12h4M4.22 19.78l2.83-2.83M16.95 7.05l2.83-2.83" />
-        </svg>
-        <span>Dashboard</span>
-      </button>
-
-      <button class="nav-btn" data-page="profile">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-          <circle cx="12" cy="8" r="4" />
-          <path d="M4 20c0-4 3.6-7 8-7s8 3 8 7" />
-        </svg>
-        <span>Profile</span>
-      </button>
-    </nav>
-
-  </div>
-  <div class="toast" id="toast"></div>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="script.js"></script>
-</body>
-
+    <div class="toast" id="toast"></div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="script.js"></script>
+  </body>
 </html>
