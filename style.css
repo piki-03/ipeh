@@ -777,4 +777,4 @@ html, body {
   .phone-shell::before { display: none; }
 }
 
-.system-log { font-style: italic; color: #888; }
+/* .system-log { font-style: italic; color: #888; } */
