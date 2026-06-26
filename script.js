@@ -4,22 +4,21 @@
 const SUPABASE_URL = "https://zyogoissymtonfkyjqxf.supabase.co";
 const SUPABASE_KEY = "sb_publishable_3uDWsaihi6doAxFdmC_VKA_GG-_aD36";
 
-// Variabel diubah menjadi supabaseClient agar tidak bentrok dengan objek global CDN
 const supabaseClient = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
 
 /* ── STATE ── */
 let state = {
   profile: null,
   logs: [],
-  sensorTemp: null,   // Nilai dibaca live dari database Supabase
-  heaterTemp: null,   // null = OFF (posisi awal semua saklar pemanas OFF)
-  vibration: null,    // null = OFF (posisi awal semua saklar getaran OFF)
-  timerEndAt: null,   // timestamp (ms) kapan sesi 15 menit berakhir, null jika tidak berjalan
+  sensorTemp: null,
+  heaterOn: false,    // REVISI 4: Diubah dari heaterTemp (angka) menjadi heaterOn (boolean: true/false)
+  vibration: null,
+  timerEndAt: null,
   timerInterval: null,
 };
 
-const DEVICE_ID = 1; // ID Baris status alat pada tabel device_status
-const TIMER_DURATION = 15 * 60; // 15 menit dalam detik
+const DEVICE_ID = 1;
+const TIMER_DURATION = 15 * 60;
 
 /* ── INITIALIZE SUPABASE REALTIME ── */
 async function initSupabaseRealtime() {
@@ -28,7 +27,6 @@ async function initSupabaseRealtime() {
     return;
   }
 
-  // 1. Ambil data awal dari database saat aplikasi dibuka
   const { data, error } = await supabaseClient
     .from('device_status')
     .select('*')
@@ -37,12 +35,12 @@ async function initSupabaseRealtime() {
 
   if (!error && data) {
     state.sensorTemp = data.sensor_temp;
-    if (data.heater_pwm) state.heaterTemp = data.heater_pwm;
+    // REVISI 4: Jika heater_pwm dari database > 0, maka state heater dianggap true (ON)
+    state.heaterOn = data.heater_pwm > 0;
     if (data.vibration_pwm) state.vibration = data.vibration_pwm;
     refreshDash();
   }
 
-  // 2. Berlangganan (Subscribe) Perubahan Realtime dari ESP32
   supabaseClient
     .channel('schema-db-changes')
     .on(
@@ -52,7 +50,6 @@ async function initSupabaseRealtime() {
         const newData = payload.new;
         state.sensorTemp = newData.sensor_temp;
         
-        // Auto-refresh jika user sedang di halaman dashboard
         if (document.getElementById('page-dashboard').classList.contains('active')) {
           refreshDash();
         }
@@ -71,18 +68,14 @@ async function pushLogToSupabase(aksi) {
     tanggal_input: state.profile.tanggal,
     gender: state.profile.gender,
     suhu_sensor: state.sensorTemp !== null ? state.sensorTemp + '°C' : '-',
-    pemanas: state.heaterTemp ? state.heaterTemp + '°C' : '-',
+    pemanas: state.heaterOn ? 'ON' : 'OFF', // REVISI 4: Log menyimpan status text 'ON' atau 'OFF'
     getaran: state.vibration ? `Volume ${state.vibration}` : '-',
     aksi: aksi
   };
 
-  // Simpan ke tabel cloud Supabase
   const { error } = await supabaseClient.from('therapy_logs').insert([logData]);
   if (error) console.error("Gagal menyimpan log ke cloud:", error);
 
-  // Tetap masukkan ke state lokal untuk performa UI instan
-  // (logs TIDAK pernah dihapus otomatis — hanya bertambah, kecuali dihapus manual
-  // lewat tombol "Hapus" per-entri atau reset profil eksplisit di halaman Profile)
   state.logs.push({
     waktu: nowStr(),
     ...logData,
@@ -90,14 +83,17 @@ async function pushLogToSupabase(aksi) {
   });
 }
 
-/* ── UPDATE REMOTE CONTROL (Kirim Data ke ESP32 via DB) ── */
+/* ── UPDATE REMOTE CONTROL ── */
 async function updateDeviceControl() {
   if (!supabaseClient) return;
+
+  // REVISI 4: Jika heaterOn bernilai true, kirim nilai PWM ke database (misal: 255 atau 1 sesuai sistem ESP32 Anda)
+  const pwmValue = state.heaterOn ? 255 : 0;
 
   const { error } = await supabaseClient
     .from('device_status')
     .update({ 
-      heater_pwm: state.heaterTemp ? state.heaterTemp : 0, 
+      heater_pwm: pwmValue, 
       vibration_pwm: state.vibration ? state.vibration : 0 
     })
     .eq('id', DEVICE_ID);
@@ -149,7 +145,8 @@ function switchPage(id) {
   document.querySelector('.phone-body').scrollTop = 0;
 
   if (id === 'dashboard') refreshDash();
-  if (id === 'riwayat')   renderLogs();
+  // REVISI 3: Logika pemanggilan halaman riwayat dikomentari
+  // if (id === 'riwayat')   renderLogs(); 
   if (id === 'profile')   renderProfile();
 }
 
@@ -182,8 +179,6 @@ document.getElementById('btn-start').addEventListener('click', () => {
   if (!umur || isNaN(+umur) || +umur < 1) { showToast('⚠ Umur tidak valid'); return; }
   if (!tanggal)                      { showToast('⚠ Tanggal harus diisi'); return; }
 
-  // Setiap kali user mengisi input (sesi baru), kontrol pemanas/getaran/timer
-  // dikembalikan ke posisi awal OFF — TAPI log riwayat yang sudah ada TIDAK dihapus.
   if (state.profile) {
     resetSessionControls();
   }
@@ -215,7 +210,12 @@ function refreshDash() {
   drawGauge(temp);
 
   document.getElementById('mini-vib').textContent  = state.vibration ? `Vol ${state.vibration}` : 'OFF';
-  document.getElementById('mini-heat').textContent = state.heaterTemp ? `${state.heaterTemp}°C` : 'OFF';
+  // REVISI 4: Indikator teks mini-stats mengikuti status true/false pemanas
+  document.getElementById('mini-heat').textContent = state.heaterOn ? 'ON' : 'OFF';
+  
+  // Menjaga agar tampilan posisi tombol saklar HTML sinkron dengan state saat realtime update masuk
+  const heaterToggle = document.getElementById('heater-toggle');
+  if (heaterToggle) heaterToggle.checked = state.heaterOn;
 }
 
 /* ── GAUGE GRAPHIC ── */
@@ -244,9 +244,9 @@ function drawGauge(value) {
     const curA  = startA + ratio * Math.PI;
 
     const grd = ctx.createLinearGradient(cx - r, cy, cx + r, cy);
-    grd.addColorStop(0,    '#00e5ff');
-    grd.addColorStop(0.5,  '#e040fb');
-    grd.addColorStop(1,    '#ffd740');
+    grd.addColorStop(0,     '#00e5ff');
+    grd.addColorStop(0.5,   '#e040fb');
+    grd.addColorStop(1,     '#ffd740');
 
     ctx.beginPath();
     ctx.arc(cx, cy, r, startA, curA);
@@ -295,34 +295,30 @@ function drawGauge(value) {
   });
 }
 
-/* ── HEATER SWITCHES ── */
-document.querySelectorAll('.heater-sw').forEach(sw => {
-  sw.addEventListener('change', () => {
-    const temp = +sw.dataset.temp;
-    if (sw.checked) {
-      document.querySelectorAll('.heater-sw').forEach(s => {
-        if (s !== sw) s.checked = false;
-      });
-      state.heaterTemp = temp;
-      pushLogToSupabase(`Pemanas diaktifkan ${temp}°C`);
-      showToast(`⚡ Pemanas ${temp}°C ON`);
+/* ── HEATER SWITCH (REVISI 4: Saklar tunggal ON/OFF) ── */
+const heaterToggle = document.getElementById('heater-toggle');
+if (heaterToggle) {
+  heaterToggle.addEventListener('change', function() {
+    if (this.checked) {
+      state.heaterOn = true;
+      pushLogToSupabase('Pemanas diaktifkan');
+      showToast('⚡ Pemanas ON');
     } else {
-      state.heaterTemp = null;
+      state.heaterOn = false;
       pushLogToSupabase('Pemanas dimatikan');
       showToast('Pemanas OFF');
     }
-    document.getElementById('mini-heat').textContent = state.heaterTemp ? `${state.heaterTemp}°C` : 'OFF';
+    document.getElementById('mini-heat').textContent = state.heaterOn ? 'ON' : 'OFF';
     
     updateDeviceControl();
 
-    // Jika sesi 15 menit sedang berjalan dan pemanas dimatikan manual, hentikan sesi
-    if (state.timerEndAt && state.heaterTemp === null) {
+    if (state.timerEndAt && !state.heaterOn) {
       finishTherapyTimer('manual');
     } else {
       updateTimerButtonState();
     }
   });
-});
+}
 
 /* ── VIBRATION SWITCHES ── */
 document.querySelectorAll('.vib-sw').forEach(sw => {
@@ -344,7 +340,6 @@ document.querySelectorAll('.vib-sw').forEach(sw => {
     
     updateDeviceControl();
 
-    // Jika sesi 15 menit sedang berjalan dan getaran dimatikan manual, hentikan sesi
     if (state.timerEndAt && state.vibration === null) {
       finishTherapyTimer('manual');
     } else {
@@ -366,10 +361,10 @@ function formatMMSS(totalSec) {
   return `${pad(m)}:${pad(s)}`;
 }
 
-// Aktif/nonaktifkan tombol "Mulai 15 Menit" berdasarkan pemanas & getaran sudah dipilih atau belum
 function updateTimerButtonState() {
-  if (state.timerEndAt) return; // sedang berjalan, biarkan tampilan "Hentikan Sesi"
-  const ready = state.heaterTemp !== null && state.vibration !== null;
+  if (state.timerEndAt) return;
+  // REVISI 4: Pengecekan siap timer disesuaikan dengan status boolean heaterOn
+  const ready = state.heaterOn && state.vibration !== null;
   btnTimer.disabled = !ready;
   timerHint.textContent = ready
     ? 'Siap memulai sesi terapi 15 menit'
@@ -386,8 +381,8 @@ function tickTimer() {
 }
 
 function startTherapyTimer() {
-  if (state.timerEndAt) return; // sudah berjalan
-  if (state.heaterTemp === null || state.vibration === null) {
+  if (state.timerEndAt) return;
+  if (!state.heaterOn || state.vibration === null) {
     showToast('⚠ Pilih pemanas & getaran terlebih dahulu');
     return;
   }
@@ -401,7 +396,7 @@ function startTherapyTimer() {
   btnTimerIcon.textContent  = '■';
   btnTimerLabel.textContent = 'Hentikan Sesi';
 
-  pushLogToSupabase(`Mulai sesi terapi 15 menit (Pemanas ${state.heaterTemp}°C, Getaran Volume ${state.vibration})`);
+  pushLogToSupabase(`Mulai sesi terapi 15 menit (Pemanas ON, Getaran Volume ${state.vibration})`);
   showToast('✓ Sesi terapi 15 menit dimulai');
 
   tickTimer();
@@ -409,16 +404,15 @@ function startTherapyTimer() {
 }
 
 function finishTherapyTimer(reason) {
-  // reason: 'auto' (15 menit habis) atau 'manual' (dihentikan/diinterupsi user)
   clearInterval(state.timerInterval);
   state.timerInterval = null;
   state.timerEndAt = null;
 
-  // Matikan pemanas (kirim OFF ke ESP32)
-  document.querySelectorAll('.heater-sw').forEach(s => s.checked = false);
-  state.heaterTemp = null;
+  // REVISI 4: Reset status tombol dan state pemanas tunggal
+  const hToggle = document.getElementById('heater-toggle');
+  if (hToggle) hToggle.checked = false;
+  state.heaterOn = false;
 
-  // Matikan getaran (kirim OFF ke ESP32)
   document.querySelectorAll('.vib-sw').forEach(s => s.checked = false);
   state.vibration = null;
 
@@ -449,11 +443,14 @@ btnTimer.addEventListener('click', () => {
   }
 });
 
-/* ── RENDER LOG CARDS ── */
+/* ── RENDER LOG CARDS (REVISI 3: Dikomen fungsinya jika diperlukan) ── */
 function renderLogs() {
+  // Fungsi ini tetap dibiarkan ada kodenya agar tidak error saat pemanggilan sistem internal, 
+  // namun halamannya sudah disembunyikan dari Navigasi.
   const list  = document.getElementById('log-list');
   const count = document.getElementById('log-count');
-  count.textContent = `${state.logs.length} entri`;
+  if (count) count.textContent = `${state.logs.length} entri`;
+  if (!list) return;
 
   if (state.logs.length === 0) {
     list.innerHTML = `
@@ -464,12 +461,9 @@ function renderLogs() {
     return;
   }
 
-  // Tampilkan log terbaru di PALING ATAS. Urutan penyimpanan asli (state.logs)
-  // tetap kronologis (lama → baru) supaya export Excel & penomoran tetap konsisten;
-  // di sini kita cuma balik urutan TAMPILAN-nya saja.
   const total = state.logs.length;
   list.innerHTML = state.logs.slice().reverse().map((log, revIdx) => {
-    const i = total - 1 - revIdx; // index asli di state.logs, untuk nomor & tombol Hapus
+    const i = total - 1 - revIdx;
     return `
     <div class="log-card">
       <div class="log-card-top">
@@ -525,41 +519,44 @@ function nowStr() {
 }
 
 /* ── DOWNLOAD EXCEL ── */
-document.getElementById('btn-download').addEventListener('click', () => {
-  if (state.logs.length === 0) { showToast('⚠ Tidak ada data'); return; }
+const btnDownload = document.getElementById('btn-download');
+if (btnDownload) {
+  btnDownload.addEventListener('click', () => {
+    if (state.logs.length === 0) { showToast('⚠ Tidak ada data'); return; }
 
-  const headers = ['No','Waktu','Nama','Umur','Tgl Input','Gender','Suhu Sensor','Pemanas','Getaran','Aksi'];
-  const esc = v => `"${String(v).replace(/"/g,'""')}"`;
+    const headers = ['No','Waktu','Nama','Umur','Tgl Input','Gender','Suhu Sensor','Pemanas','Getaran','Aksi'];
+    const esc = v => `"${String(v).replace(/"/g,'""')}"`;
 
-  const profileInfo = state.profile
-    ? `Profil: ${state.profile.nama} | Umur: ${state.profile.umur} | Gender: ${state.profile.gender} | Tgl: ${state.profile.tanggal}`
-    : '-';
+    const profileInfo = state.profile
+      ? `Profil: ${state.profile.nama} | Umur: ${state.profile.umur} | Gender: ${state.profile.gender} | Tgl: ${state.profile.tanggal}`
+      : '-';
 
-  const rows = state.logs.map((l, i) => [
-    i+1, l.waktu, l.nama, l.umur, l.tanggal_input || l.tanggal, l.gender, l.suhu, l.pemanas, l.getaran, l.aksi
-  ]);
+    const rows = state.logs.map((l, i) => [
+      i+1, l.waktu, l.nama, l.umur, l.tanggal_input || l.tanggal, l.gender, l.suhu, l.pemanas, l.getaran, l.aksi
+    ]);
 
-  const lines = [
-    esc('G-Genumax Dashboard — Log Data'),
-    esc(profileInfo),
-    esc(`Digenerate: ${nowStr()}`),
-    '',
-    headers.map(esc).join(','),
-    ...rows.map(r => r.map(esc).join(',')),
-    '',
-    esc(`Total: ${state.logs.length} entri`),
-  ];
+    const lines = [
+      esc('G-Genumax Dashboard — Log Data'),
+      esc(profileInfo),
+      esc(`Digenerate: ${nowStr()}`),
+      '',
+      headers.map(esc).join(','),
+      ...rows.map(r => r.map(esc).join(',')),
+      '',
+      esc(`Total: ${state.logs.length} entri`),
+    ];
 
-  const csv  = '\uFEFF' + lines.join('\n');
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-  const url  = URL.createObjectURL(blob);
-  const a    = document.createElement('a');
-  a.href     = url;
-  a.download = `s-home-log-${todayStr()}.csv`;
-  a.click();
-  URL.revokeObjectURL(url);
-  showToast('✓ File Excel diunduh');
-});
+    const csv  = '\uFEFF' + lines.join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = `s-home-log-${todayStr()}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('✓ File Excel diunduh');
+  });
+}
 
 /* ── PROFILE RENDER ── */
 function renderProfile() {
@@ -581,16 +578,15 @@ function renderProfile() {
   document.getElementById('pstat-log').textContent      = state.logs.length;
 }
 
-/* ── RESET KONTROL SESI (dipanggil setiap kali user mengisi Input lagi) ──
-   Mengembalikan saklar pemanas, saklar getaran, dan timer ke posisi awal OFF.
-   TIDAK menghapus log riwayat — log lama tetap tersimpan, log baru ditambahkan. */
+/* ── RESET KONTROL SESI ── */
 function resetSessionControls() {
   if (state.timerEndAt) {
     finishTherapyTimer('manual');
   }
-  state.heaterTemp = null;
+  state.heaterOn = false; // REVISI 4: Menggunakan boolean reset
   state.vibration  = null;
-  document.querySelectorAll('.heater-sw').forEach(s => s.checked = false);
+  const hToggle = document.getElementById('heater-toggle');
+  if (hToggle) hToggle.checked = false;
   document.querySelectorAll('.vib-sw').forEach(s => s.checked = false);
   document.getElementById('mini-heat').textContent = 'OFF';
   document.getElementById('mini-vib').textContent  = 'OFF';
@@ -598,9 +594,7 @@ function resetSessionControls() {
   updateDeviceControl();
 }
 
-/* ── RESET PROFIL (eksplisit, dari halaman Profile) ──
-   Tombol "Ganti Profil & Hapus Log" — INI satu-satunya aksi yang menghapus log riwayat,
-   sesuai label & peringatan pada tombolnya. */
+/* ── RESET PROFIL ── */
 document.getElementById('btn-reset-profile').addEventListener('click', () => {
   if (!state.profile) { showToast('⚠ Belum ada profil aktif'); return; }
   if (!confirm('Semua log akan dihapus dan profil direset. Lanjutkan?')) return;
@@ -612,7 +606,6 @@ document.getElementById('btn-reset-profile').addEventListener('click', () => {
 });
 
 function hardReset() {
-  // Hentikan timer jika berjalan, tanpa mengirim log baru (semua log akan dihapus)
   if (state.timerInterval) clearInterval(state.timerInterval);
   state.timerInterval = null;
   state.timerEndAt    = null;
@@ -620,7 +613,7 @@ function hardReset() {
   state.profile    = null;
   state.logs       = [];
   state.sensorTemp = null;
-  state.heaterTemp = null;
+  state.heaterOn = false; // REVISI 4: Menggunakan boolean reset
   state.vibration  = null;
 
   document.getElementById('inp-nama').value    = '';
@@ -633,8 +626,8 @@ function hardReset() {
   genderGroup.querySelectorAll('.gender-btn').forEach((b,i) => b.classList.toggle('active', i===0));
   selectedGender = 'Pria';
 
-  // Posisi awal: semua saklar pemanas & getaran OFF
-  document.querySelectorAll('.heater-sw').forEach(s => s.checked = false);
+  const hToggle = document.getElementById('heater-toggle');
+  if (hToggle) hToggle.checked = false;
   document.querySelectorAll('.vib-sw').forEach(s => s.checked = false);
   document.getElementById('mini-heat').textContent = 'OFF';
   document.getElementById('mini-vib').textContent  = 'OFF';
@@ -655,17 +648,15 @@ drawGauge(null);
 updateTimerButtonState();
 initSupabaseRealtime();
 
-/* ── AUTOMATIC PERIODIC LOGGING (TAMBAHAN) ── */
-// Interval diatur ke 5 menit (3 * 60 * 1000 milidetik)
+/* ── AUTOMATIC PERIODIC LOGGING ── */
 const LOG_INTERVAL_MS = 5 * 60 * 1000; 
 
 setInterval(() => {
-  // Logika: Hanya kirim log otomatis jika profil pasien sudah diisi/aktif
   if (state.profile) {
     pushLogToSupabase('Pencatatan berkala otomatis');
     
-    // Opsional: Perbarui halaman riwayat secara instan jika user sedang membuka menu riwayat
-    if (document.getElementById('page-riwayat').classList.contains('active')) {
+    const pageRiwayat = document.getElementById('page-riwayat');
+    if (pageRiwayat && pageRiwayat.classList.contains('active')) {
       renderLogs();
     }
   }
