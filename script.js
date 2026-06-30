@@ -372,8 +372,8 @@ function formatMMSS(totalSec) {
 }
 
 function updateTimerButtonState() {
-  if (state.timerEndAt) return;
-  // REVISI 4: Pengecekan siap timer disesuaikan dengan status boolean heaterOn
+  if (state.timerEndAt) return; // Jika timer sedang berjalan, abaikan fungsi ini agar tombol tidak berubah menjadi disabled
+  
   const ready = state.heaterOn && state.vibration !== null;
   btnTimer.disabled = !ready;
   timerHint.textContent = ready
