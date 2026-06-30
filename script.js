@@ -89,14 +89,17 @@ async function pushLogToSupabase(aksi) {
 async function updateDeviceControl() {
   if (!supabaseClient) return;
 
-  // REVISI 4: Jika heaterOn bernilai true, kirim nilai PWM ke database (misal: 255 atau 1 sesuai sistem ESP32 Anda)
-  const pwmValue = state.heaterOn ? 255 : 0;
+  // PERBAIKAN: Hardware hanya boleh menerima nilai PWM jika timer sedang berjalan (state.timerEndAt tidak null)
+  const isRunning = state.timerEndAt !== null;
+  
+  const pwmValue = (state.heaterOn && isRunning) ? 255 : 0;
+  const vibValue = (state.vibration && isRunning) ? state.vibration : 0;
 
   const { error } = await supabaseClient
     .from('device_status')
     .update({ 
       heater_pwm: pwmValue, 
-      vibration_pwm: state.vibration ? state.vibration : 0 
+      vibration_pwm: vibValue 
     })
     .eq('id', DEVICE_ID);
 
@@ -350,11 +353,8 @@ document.querySelectorAll('.vib-sw').forEach(sw => {
     
     updateDeviceControl();
 
-    if (state.timerEndAt && state.vibration === null) {
-      finishTherapyTimer('manual');
-    } else {
-      updateTimerButtonState();
-    }
+    // REVISI: Hanya memperbarui status tombol Mulai tanpa mematikan timer di tengah jalan
+    updateTimerButtonState();
   });
 });
 
