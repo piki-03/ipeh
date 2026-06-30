@@ -50,7 +50,9 @@ async function initSupabaseRealtime() {
         const newData = payload.new;
         state.sensorTemp = newData.sensor_temp;
         
-        if (document.getElementById('page-dashboard').classList.contains('active')) {
+        // PERBAIKAN: Amankan dengan null check
+        const pageDashboard = document.getElementById('page-dashboard');
+        if (pageDashboard && pageDashboard.classList.contains('active')) {
           refreshDash();
         }
       }
@@ -199,10 +201,8 @@ document.getElementById('btn-start').addEventListener('click', () => {
 });
 
 /* ── DASHBOARD ── */
-/* ── DASHBOARD ── */
 function refreshDash() {
   const name = state.profile ? state.profile.nama : 'Tamu';
-  
   const dashHello = document.getElementById('dash-hello');
   if (dashHello) dashHello.textContent = `Hello ${name} 👋`;
 
@@ -210,7 +210,6 @@ function refreshDash() {
   const tempStr = temp !== null ? temp : '--';
   const tempCelciusStr = temp !== null ? `${temp}°C` : '--';
 
-  // Pengaman untuk elemen gauge dan mini-temp
   const gaugeVal = document.getElementById('gauge-val');
   if (gaugeVal) gaugeVal.textContent = tempStr;
 
@@ -573,20 +572,24 @@ if (btnDownload) {
 function renderProfile() {
   const p = state.profile;
   if (!p) {
-    document.getElementById('profile-avatar').textContent = '?';
-    document.getElementById('profile-name').textContent   = 'Belum ada profil';
-    document.getElementById('profile-badge').textContent  = '—';
-    document.getElementById('pstat-umur').textContent     = '—';
-    document.getElementById('pstat-tgl').textContent      = '—';
-    document.getElementById('pstat-log').textContent      = state.logs.length;
+    if(document.getElementById('profile-avatar')) document.getElementById('profile-avatar').textContent = '?';
+    if(document.getElementById('profile-name')) document.getElementById('profile-name').textContent = 'Belum ada profil';
+    if(document.getElementById('profile-badge')) document.getElementById('profile-badge').textContent = '—';
+    if(document.getElementById('pstat-umur')) document.getElementById('pstat-umur').textContent = '—';
+    if(document.getElementById('pstat-tgl')) document.getElementById('pstat-tgl').textContent = '—';
+    
+    const pstatLog = document.getElementById('pstat-log');
+    if (pstatLog) pstatLog.textContent = state.logs.length;
     return;
   }
-  document.getElementById('profile-avatar').textContent = p.nama.charAt(0).toUpperCase();
-  document.getElementById('profile-name').textContent   = p.nama;
-  document.getElementById('profile-badge').textContent  = p.gender;
-  document.getElementById('pstat-umur').textContent     = `${p.umur} th`;
-  document.getElementById('pstat-tgl').textContent      = p.tanggal;
-  document.getElementById('pstat-log').textContent      = state.logs.length;
+  if(document.getElementById('profile-avatar')) document.getElementById('profile-avatar').textContent = p.nama.charAt(0).toUpperCase();
+  if(document.getElementById('profile-name')) document.getElementById('profile-name').textContent = p.nama;
+  if(document.getElementById('profile-badge')) document.getElementById('profile-badge').textContent = p.gender;
+  if(document.getElementById('pstat-umur')) document.getElementById('pstat-umur').textContent = `${p.umur} th`;
+  if(document.getElementById('pstat-tgl')) document.getElementById('pstat-tgl').textContent = p.tanggal;
+  
+  const pstatLog = document.getElementById('pstat-log');
+  if (pstatLog) pstatLog.textContent = state.logs.length;
 }
 
 /* ── RESET KONTROL SESI ── */
