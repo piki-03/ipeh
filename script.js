@@ -89,17 +89,14 @@ async function pushLogToSupabase(aksi) {
 async function updateDeviceControl() {
   if (!supabaseClient) return;
 
-  // PERBAIKAN: Hardware hanya boleh menerima nilai PWM jika timer sedang berjalan (state.timerEndAt tidak null)
-  const isRunning = state.timerEndAt !== null;
-  
-  const pwmValue = (state.heaterOn && isRunning) ? 255 : 0;
-  const vibValue = (state.vibration && isRunning) ? state.vibration : 0;
+  // Kembali ke logika asli: Biarkan web mengirim status saklar apa adanya ke database
+  const pwmValue = state.heaterOn ? 255 : 0;
 
   const { error } = await supabaseClient
     .from('device_status')
     .update({ 
       heater_pwm: pwmValue, 
-      vibration_pwm: vibValue 
+      vibration_pwm: state.vibration ? state.vibration : 0 
     })
     .eq('id', DEVICE_ID);
 
