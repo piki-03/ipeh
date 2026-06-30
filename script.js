@@ -199,21 +199,32 @@ document.getElementById('btn-start').addEventListener('click', () => {
 });
 
 /* ── DASHBOARD ── */
+/* ── DASHBOARD ── */
 function refreshDash() {
   const name = state.profile ? state.profile.nama : 'Tamu';
-  document.getElementById('dash-hello').textContent = `Hello ${name} 👋`;
+  
+  const dashHello = document.getElementById('dash-hello');
+  if (dashHello) dashHello.textContent = `Hello ${name} 👋`;
 
   const temp = state.sensorTemp;
-  document.getElementById('gauge-val').textContent = temp !== null ? temp : '--';
-  document.getElementById('mini-temp').textContent = temp !== null ? `${temp}°C` : '--';
+  const tempStr = temp !== null ? temp : '--';
+  const tempCelciusStr = temp !== null ? `${temp}°C` : '--';
+
+  // Pengaman untuk elemen gauge dan mini-temp
+  const gaugeVal = document.getElementById('gauge-val');
+  if (gaugeVal) gaugeVal.textContent = tempStr;
+
+  const miniTemp = document.getElementById('mini-temp');
+  if (miniTemp) miniTemp.textContent = tempCelciusStr;
 
   drawGauge(temp);
 
-  document.getElementById('mini-vib').textContent  = state.vibration ? `Vol ${state.vibration}` : 'OFF';
-  // REVISI 4: Indikator teks mini-stats mengikuti status true/false pemanas
-  document.getElementById('mini-heat').textContent = state.heaterOn ? 'ON' : 'OFF';
+  const miniVib = document.getElementById('mini-vib');
+  if (miniVib) miniVib.textContent = state.vibration ? `Vol ${state.vibration}` : 'OFF';
   
-  // Menjaga agar tampilan posisi tombol saklar HTML sinkron dengan state saat realtime update masuk
+  const miniHeat = document.getElementById('mini-heat');
+  if (miniHeat) miniHeat.textContent = state.heaterOn ? 'ON' : 'OFF';
+  
   const heaterToggle = document.getElementById('heater-toggle');
   if (heaterToggle) heaterToggle.checked = state.heaterOn;
 }
