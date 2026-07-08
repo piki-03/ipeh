@@ -660,7 +660,8 @@ updateTimerButtonState();
 initSupabaseRealtime();
 
 /* ── AUTOMATIC PERIODIC LOGGING ── */
-const LOG_INTERVAL_MS = 5 * 60 * 1000; 
+// const LOG_INTERVAL_MS = 5 * 60 * 1000; 
+const LOG_INTERVAL_MS = 30 * 1000; 
 
 setInterval(() => {
   if (state.profile) {
