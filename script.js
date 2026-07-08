@@ -18,7 +18,7 @@ let state = {
 };
 
 const DEVICE_ID = 1;
-const TIMER_DURATION = 15 * 60;
+const TIMER_DURATION = 20 * 60;
 
 /* ── INITIALIZE SUPABASE REALTIME ── */
 async function initSupabaseRealtime() {
