@@ -148,7 +148,7 @@ function switchPage(id) {
 
   if (id === 'dashboard') refreshDash();
   // REVISI 3: Logika pemanggilan halaman riwayat dikomentari
-  // if (id === 'riwayat')   renderLogs(); 
+  if (id === 'riwayat')   renderLogs(); 
   if (id === 'profile')   renderProfile();
 }
 
