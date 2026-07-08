@@ -237,7 +237,39 @@
 
           <div style="height: 24px"></div>
         </section>
+        
+           <section class="page" id="page-riwayat">
+          <div class="page-topbar">
+            <div class="topbar-logo">
+              <img
+                src="logo.jpeg"
+                alt="Logo Knee Therapi"
+                style="
+                  width: 32px;
+                  height: 32px;
+                  object-fit: cover;
+                  border-radius: 50%;
+                  display: inline-block;
+                  vertical-align: middle;
+                "
+              />
+              <span class="logo-name">Riwayat</span>
+            </div>
+          </div>
 
+          <div
+            class="log-count-bar"
+            style="display: flex; align-items: center; justify-content: space-between"
+          >
+            <span id="log-count">0 entri</span>
+            <button class="btn-dl" id="btn-download">⬇ Download CSV</button>
+          </div>
+
+          <div class="log-list" id="log-list"></div>
+
+          <div style="height: 24px"></div>
+        </section>
+        
         <section class="page" id="page-profile">
           <div class="page-topbar">
             <div class="topbar-logo">
@@ -324,6 +356,21 @@
           <span>Dashboard</span>
         </button>
 
+        <button class="nav-btn" data-page="riwayat">
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+          >
+            <path d="M3 3v5h5" />
+            <path d="M3.05 13A9 9 0 106 5.3L3 8" />
+            <path d="M12 7v5l4 2" />
+          </svg>
+          <span>Riwayat</span>
+        </button>
+        
         <button class="nav-btn" data-page="profile">
           <svg
             viewBox="0 0 24 24"
