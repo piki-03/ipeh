@@ -374,7 +374,7 @@ function updateTimerButtonState() {
   const ready = state.heaterOn && state.vibration !== null;
   btnTimer.disabled = !ready;
   timerHint.textContent = ready
-    ? 'Siap memulai sesi terapi 15 menit'
+    ? 'Siap memulai sesi terapi 20 menit'
     : 'Pilih pemanas & getaran dahulu';
 }
 
@@ -403,8 +403,8 @@ function startTherapyTimer() {
   btnTimerIcon.textContent  = '■';
   btnTimerLabel.textContent = 'Hentikan Sesi';
 
-  pushLogToSupabase(`Mulai sesi terapi 15 menit (Pemanas ON, Getaran Volume ${state.vibration})`);
-  showToast('✓ Sesi terapi 15 menit dimulai');
+  pushLogToSupabase(`Mulai sesi terapi 20 menit (Pemanas ON, Getaran Volume ${state.vibration})`);
+  showToast('✓ Sesi terapi 20 menit dimulai');
 
   tickTimer();
   state.timerInterval = setInterval(tickTimer, 1000);
@@ -432,12 +432,12 @@ function finishTherapyTimer(reason) {
   timerDisplay.textContent = formatMMSS(TIMER_DURATION);
   btnTimer.classList.remove('running');
   btnTimerIcon.textContent  = '▶';
-  btnTimerLabel.textContent = 'Mulai 15 Menit';
+  btnTimerLabel.textContent = 'Mulai 20 Menit';
 
   pushLogToSupabase(reason === 'auto'
-    ? 'Sesi 15 menit selesai — pemanas & getaran otomatis OFF'
+    ? 'Sesi 20 menit selesai — pemanas & getaran otomatis OFF'
     : 'Sesi terapi dihentikan manual — pemanas & getaran OFF');
-  showToast(reason === 'auto' ? '⏱ 15 menit selesai, perangkat OFF' : 'Sesi dihentikan, perangkat OFF');
+  showToast(reason === 'auto' ? '⏱ 20 menit selesai, perangkat OFF' : 'Sesi dihentikan, perangkat OFF');
 
   updateTimerButtonState();
 }
@@ -647,7 +647,7 @@ function hardReset() {
   timerDisplay.textContent = formatMMSS(TIMER_DURATION);
   btnTimer.classList.remove('running');
   btnTimerIcon.textContent  = '▶';
-  btnTimerLabel.textContent = 'Mulai 15 Menit';
+  btnTimerLabel.textContent = 'Mulai 20 Menit';
   updateTimerButtonState();
 
   drawGauge(null);
